@@ -63,8 +63,8 @@ What is compared:
 
 - $[H_{mn},P_m]=[H_{mn},Q_n]=0$ at every lattice point, for
   $J=1,\tfrac32,\dots,4$ and $k_2/k_1=0.05,0.3,0.9$;
-- $\operatorname{rank}B_{mn}=f(m,n)$ and
-  $\operatorname{rank}[P_m,Q_n]=2f(m,n)$ at every point;
+- $\mathrm{rank}\,B_{mn}=f(m,n)$ and
+  $\mathrm{rank}\,[P_m,Q_n]=2f(m,n)$ at every point;
 - the observed multiplicities against $f(m,n)$, and that no eigenvalue has
   multiplicity above two;
 - $\det M<0$ for every doublet, and the closed form of Eq. (26) against the
