@@ -1,0 +1,36 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite both the software and the article."
+title: "Verification and figure code for: Hidden symmetry at the diabolical points of a biaxial spin"
+abstract: >-
+  A single self-contained Python program that generates the five figures of the
+  article and, in --verify mode, recomputes every numerical claim the article
+  makes from the definition of the model and fails on any discrepancy.
+type: software
+authors:
+  - family-names: "Ghassemi Tabrizi"
+    given-names: "Shadan"
+    email: "s.ghassemi-tabrizi@hzdr.de"
+    affiliation: "Technische Universitat Dresden and Center for Advanced Systems Understanding (CASUS)"
+    orcid: "https://orcid.org/0000-0002-4358-4312"
+license: MIT
+version: "1.0.0"
+date-released: "2026-07-28"
+repository-code: "https://github.com/ghasdeke/biaxial-dp-hidden-symmetry"
+keywords:
+  - molecular magnets
+  - diabolical points
+  - Berry phase
+  - Chern number
+  - hidden symmetry
+  - spin tunneling
+preferred-citation:
+  type: article
+  title: "Hidden symmetry at the diabolical points of a biaxial spin"
+  authors:
+    - family-names: "Ghassemi Tabrizi"
+      given-names: "Shadan"
+  year: 2026
+  journal: "Physical Review B"
+  # volume: 0
+  # start: 000000
+  # doi: 10.1103/PhysRevB.XX.XXXXXX
