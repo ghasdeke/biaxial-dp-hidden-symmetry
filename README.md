@@ -17,9 +17,9 @@ $$H(\mathbf h)=k_1S_x^2+k_2S_y^2-\mathbf h\cdot\mathbf S,\qquad k_1>k_2>0$$
 for spin $J$, $N=2J+1$. With $c=\sqrt{k_2/k_1}$, $s=\sqrt{1-k_2/k_1}$ and
 $Z_\pm=\pm sS_x+cS_z$, the diabolical points are the lattice
 
-$$h_x=k_1s\,(m-n),\qquad h_z=-k_1c\,(m+n+1),\qquad h_y=0,$$
+$$h_x=k_1s\\,(m-n),\qquad h_z=-k_1c\\,(m+n+1),\qquad h_y=0,$$
 
-with $m,n\in\{-J,\dots,J-1\}$, and the multiplicity of a point is
+with $m,n\in\\{-J,\dots,J-1\\}$, and the multiplicity of a point is
 $f(m,n)=\min\\{p,q,N-p,N-q\\}$ with $p=J+m+1$, $q=J+n+1$.
 
 ## Install
@@ -63,8 +63,8 @@ What is compared:
 
 - $[H_{mn},P_m]=[H_{mn},Q_n]=0$ at every lattice point, for
   $J=1,\tfrac32,\dots,4$ and $k_2/k_1=0.05,0.3,0.9$;
-- $\mathrm{rank}\,B_{mn}=f(m,n)$ and
-  $\mathrm{rank}\,[P_m,Q_n]=2f(m,n)$ at every point;
+- $\mathrm{rank}\\,B_{mn}=f(m,n)$ and
+  $\mathrm{rank}\\,[P_m,Q_n]=2f(m,n)$ at every point;
 - the observed multiplicities against $f(m,n)$, and that no eigenvalue has
   multiplicity above two;
 - $\det M<0$ for every doublet, and the closed form of Eq. (26) against the
