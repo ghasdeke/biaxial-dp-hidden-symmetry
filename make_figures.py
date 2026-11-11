@@ -4,11 +4,13 @@ r"""
 make_figures.py
 ===============
 
-Single, self-contained generator for the five figures of the PRB manuscript
+Figure and verification code for the article
 
-    "Diabolical points of a biaxial spin as a finite time-band limiting
-     problem: two spectral-cut projectors, exact multiplicities, and a
-     uniform Chern orientation"      (v8 source: Biaxial_DP_PRB_v5.tex)
+    S. Ghassemi Tabrizi, "Hidden symmetry at the diabolical points of a
+    biaxial spin" (Physical Review B, under review; arXiv:2607.26308).
+
+Default run: writes the five figures of the article into the directory of
+this file,
 
     fig_chains.pdf    Fig. 1  the two severed chains          (schematic, J=3)
     fig_lattice.pdf   Fig. 2  the DP lattice                  (J=3)
@@ -16,16 +18,22 @@ Single, self-contained generator for the five figures of the PRB manuscript
     fig_detM.pdf      Fig. 4  smallest |det M| over the lattice
     fig_cutline.pdf   Fig. 5  spectrum along a cut line       (J=3, k2/k1=0.3)
 
-    The numbers above are the manuscript's, i.e. the order in which the
-    figures appear in Biaxial_DP_PRB_v5.tex.  (The old generator scripts used
-    a different internal order, chains/lattice/cutline/detM, which is why
-    their comments call the cut-line plot "Figure 3".)
-
-Run from inside /tmp/prb/v8:
-
     python3 make_figures.py
 
-Requirements: numpy + matplotlib (scipy is allowed but not needed).
+--verify: writes no figure; recomputes the quantitative claims of Sec. VI,
+Table II, Table S1 of the Supplemental Material, the thresholds of SM
+Sec. S5, and the Fe8 census, field values and values of C at which the
+ground-pair DPs leave the hard axis (Sec. VII), and compares them with the
+manuscript source (see README.md for the exact list):
+
+    python3 make_figures.py --verify --tex /path/to/Biaxial_DP_PRB_v10.tex
+
+The source of the Supplemental Material, <stem>_supp.tex, must lie in the
+same directory.  Equation, section and table numbers in this file refer to
+the revised manuscript (v10).
+
+Requirements: numpy and matplotlib for the figures; scipy and mpmath in
+addition for --verify.
 
 Model
 -----
@@ -48,39 +56,13 @@ before matplotlib is imported so that the PDF byte stream -- which otherwise
 carries a creation timestamp -- is reproducible: two runs give byte-identical
 PDFs, and the log prints the SHA-256 of every file it writes.
 
-Defects fixed with respect to the old scripts
----------------------------------------------
-(a) figs_prb.py distinguished the two data families in Figs. 1-3 by color
-    only, and #1f4e79 / #a03020 have nearly the same luminance, so the
-    figures were unreadable in greyscale.  The colours are unchanged; a
-    second, color-independent channel has been added to every figure that
-    encoded anything in color:
-      Fig. 1 chains   circles (range of the projector) vs squares (kernel)
-      Fig. 2 lattice  solid lines (P_m loci) vs dashed lines (Q_n loci)
-      Fig. 3 stars    filled stars vs open stars for the two pinned clusters
-      Fig. 5 cutline  solid (P_m H block) vs dashed ((1-P_m) H block), the
-                      dash pattern lengthened and the widths made unequal
-    The caption of Fig. 2 currently reads "Blue lines ... red lines ..."; the
-    new encoding is redundant, so the caption stays true, but "solid (blue)
-    ... dashed (red)" would describe the figure better.  The caption of the
-    cut-line figure already says "solid and dashed".  (.tex not edited here.)
-(b) figs_prb.py's det M figure stopped at J = 3, although the text quotes the
-    J = 4 value; J = 7/2 and J = 4 are now included.
-(c) The rank cutoff np.linalg.matrix_rank(..., tol=1e-8) is an *absolute*
-    cutoff.  It misclassifies whenever the true nonzero singular values fall
-    below 1e-8, which happens near the uniaxial limits and for large J (see
-    robust_rank() for the replacement and the measured margins).  Ranks are
-    now obtained from a cutoff scaled by the largest singular value, the
-    classification margin is monitored, and rank == f(m,n) is *asserted* at
-    every sampled point; a failure raises and stops the run.
-(d) make_tables.py's sci() hard-coded a leading "-", so a positive number
-    would have been typeset negative.  Fixed and unit-tested (test_sci()).
-(e) the "ok" flag of make_data.py omitted the det M < 0 test that the
-    manuscript claims to have made.  check_point() now includes it.
-(f) make_data.py did its table writing at import time, so importing it from
-    make_figs.py / make_tables.py re-wrote table_J2.tex and table_summary.tex
-    (same file names, two producers).  This file imports nothing local, does
-    all its work inside main(), and writes only the five PDFs listed above.
+Numerical safeguards
+--------------------
+Ranks are obtained from a singular-value cutoff, the classification margin
+is monitored, and rank == f(m,n) is asserted at every sampled point; a
+failure raises and stops the run.  Degeneracies are classified with a grey
+zone between two thresholds, and a spacing inside the grey zone aborts the
+run.
 """
 
 from __future__ import annotations
@@ -407,7 +389,7 @@ def lattice_scan(J, k1, k2, want_dets=True, accuracy_probe=False):
 
 
 def check_point(res):
-    """The 'all checks' flag of the manuscript's Table I -- including the sign
+    """The 'all checks' flag of the manuscript's Table II -- including the sign
     test on det M that the old make_data.py left out (defect e)."""
     rows = res["rows"]
     return (all(r["f"] == r["ndoub"] for r in rows)
@@ -918,22 +900,22 @@ def jlabel(J):
 
 # ==========================================================================
 # 8.  --verify : reproduce, print and cross-check every number the
-#     manuscript asserts in Sec. VI, Appendix G, Table I and Table II.
+#     manuscript asserts in Sec. VI, SM Sec. S5, Table II and Table S1.
 #
 #     Nothing below is reached by the default (figure-generating) run, so the
 #     five PDFs remain byte-identical.
 # ==========================================================================
 
-TEX_NAME = "Biaxial_DP_PRB_v6.tex"
+TEX_NAME = "Biaxial_DP_PRB_v10.tex"
 
 # The sweep of Sec. VI, verbatim.
 VERIFY_JS = (1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0)
 VERIFY_RATIOS = (0.05, 0.3, 0.9)
 
-# Table II is the complete lattice data for this point of the sweep.
+# Table S1 is the complete lattice data for this point of the sweep.
 TABLE2_J, TABLE2_RATIO = 2.0, 0.3
 
-# High-precision spot checks of Eq. (25) against Eq. (23).  At least one
+# High-precision spot checks of Eq. (27) against Eq. (24).  At least one
 # lattice point at J = 4 and one at J = 3, as the text claims.  The first
 # entry is the point that carries the worst double-precision residual.
 HP_DPS = 60
@@ -965,16 +947,16 @@ def _mant_exp(x, digits=1):
 
 
 # --------------------------------------------------------------------------
-# 8a.  The Z_+ frame: severed chain, L/R doublet partners, closed form (25)
+# 8a.  The Z_+ frame: severed chain, L/R doublet partners, factorized det M (27)
 # --------------------------------------------------------------------------
 
 def zplus_frame(J, k2_over_k1):
     r"""(S_x, S_y, S_z) expressed in the |r;+> eigenbasis of Z_+.
 
-    (X_+, Y, Z_+) of Eq. (5) satisfy the same su(2) algebra as (S_x, S_y, S_z)
+    (X_+, Y, Z_+) of Eq. (4) satisfy the same su(2) algebra as (S_x, S_y, S_z)
     -- [X_+,Y] = i Z_+ and cyclic -- and Z_+ is diagonal with entries -J..J in
     its own eigenbasis, so in that basis the triple (X_+, Y, Z_+) is
-    numerically the same set of matrices as spin_ops(J).  Inverting Eq. (5),
+    numerically the same set of matrices as spin_ops(J).  Inverting Eq. (4),
 
         S_x = c X_+ + s Z_+,    S_y = Y,    S_z = -s X_+ + c Z_+ .
     """
@@ -985,21 +967,21 @@ def zplus_frame(J, k2_over_k1):
 
 
 def lr_doublets(J, k1, k2, m, n):
-    r"""Doublets of H_{mn} resolved into their L/R partners, plus Eq. (25).
+    r"""Doublets of H_{mn} resolved into their L/R partners, plus Eq. (27).
 
     In the Z_+ eigenbasis H_{mn} is real symmetric and the bond m<->m+1 is
-    severed (Sec. II), so H is block diagonal with blocks
+    severed (Result 1), so H is block diagonal with blocks
 
         L = span{|r>}_{r<=m}          R = span{|r>}_{r>=m+1} ,
 
     and the two partners of a doublet are one eigenvector of each block --
-    exactly the |L>, |R> of Appendix F.  Diagonalizing the two blocks
-    separately therefore produces the doublet basis in which Eq. (25) is
+    exactly the |L>, |R> of Sec. V.  Diagonalizing the two blocks
+    separately therefore produces the doublet basis in which Eq. (27) is
     stated, with no degenerate-subspace ambiguity at all.
 
     Returns (rows, diagnostics).  Each row carries
-        det_closed  -- Eq. (25),  -(l_m^2 a^2 b^2 / 8)(<Z_+>_R - <Z_+>_L)
-        det_lr      -- Eq. (23) evaluated in the same (|L>,|R>) basis
+        det_closed  -- Eq. (27),  -(l_m^2 a^2 b^2 / 8)(<Z_+>_R - <Z_+>_L)
+        det_lr      -- Eq. (24) evaluated in the same (|L>,|R>) basis
     """
     N = int(round(2 * J)) + 1
     S, Xp, Y, Zp, rvals, c, s = zplus_frame(J, k2 / k1)
@@ -1033,9 +1015,9 @@ def lr_doublets(J, k1, k2, m, n):
             alpha, beta = float(L[cut]), float(R[cut + 1])       # <m|L>, <m+1|R>
             zL = float(np.sum(rvals * L ** 2))
             zR = float(np.sum(rvals * R ** 2))
-            if not (zL <= m + 1e-9 <= m + 1 - 1e-9 <= zR):        # Eq. (24)
+            if not (zL <= m + 1e-9 <= m + 1 - 1e-9 <= zR):        # Eq. (26)
                 fail(f"J={J} (m,n)=({m},{n}): <Z_+>_L={zL}, <Z_+>_R={zR} "
-                     "violate the ordering of Eq. (24)")
+                     "violate the ordering of Eq. (26)")
             d_cl = -(ell_m ** 2 * alpha ** 2 * beta ** 2 / 8.0) * (zR - zL)
             d_lr = float(det_M(S, np.stack([L, R], axis=1).astype(complex)))
             rows.append(dict(E=0.5 * (eL + eR), alpha=alpha, beta=beta,
@@ -1049,8 +1031,8 @@ def min_sigma_B(J, k2_over_k1):
     """Smallest *nonvanishing* singular value of B_mn over the lattice of J.
 
     "Nonvanishing" means the f(m,n)-th singular value, f being the exact rank
-    of Eq. (17); everything past it is round-off.  This is the quantity that
-    decides whether an absolute rank cutoff is safe (Appendix G).
+    of Eq. (15); everything past it is round-off.  This is the quantity that
+    decides whether an absolute rank cutoff is safe (SM Sec. S5).
     """
     N = int(round(2 * J)) + 1
     c, s = np.sqrt(k2_over_k1), np.sqrt(1.0 - k2_over_k1)
@@ -1072,12 +1054,12 @@ def min_sigma_B(J, k2_over_k1):
 
 
 def direct_doublets(J, k1, k2, m, n):
-    """Eq. (23) from a full diagonalisation of H in the S_z basis.
+    """Eq. (24) from a full diagonalisation of H in the S_z basis.
 
     This is the code path the shipped lattice_scan() uses: the doublet basis
     is whatever LAPACK returns for the degenerate pair, and the 3x3 matrix of
-    Eq. (23) is formed and its determinant taken.  det M is invariant under
-    U(2) rotations inside the doublet, so the result must agree with Eq. (25);
+    Eq. (24) is formed and its determinant taken.  det M is invariant under
+    U(2) rotations inside the doublet, so the result must agree with Eq. (27);
     the discrepancy is the round-off of the direct evaluation.
     """
     N = int(round(2 * J)) + 1
@@ -1089,7 +1071,7 @@ def direct_doublets(J, k1, k2, m, n):
     w, V = np.linalg.eigh(H)
     width = float(w[-1] - w[0])
     gaps_lvl = np.diff(w) / np.maximum(1.0, np.abs(w[:-1]))   # as in lattice_scan
-    gaps_wid = np.diff(w) / max(width, 1e-300)                # as Appendix G reads
+    gaps_wid = np.diff(w) / max(width, 1e-300)                # as SM Sec. S5 reads
     out, pair_gaps, sep_gaps, i = [], [], [], 0
     while i < N - 1:
         if gaps_lvl[i] < DOUBLET_RTOL:
@@ -1110,19 +1092,15 @@ def _ensure_mpmath():
     try:
         import mpmath                                     # noqa: F401
     except ImportError:
-        import subprocess
-        print("  mpmath not installed -- installing with pip "
-              "--break-system-packages ...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q",
-                               "--break-system-packages", "mpmath"])
-        import mpmath                                     # noqa: F401
+        fail("--verify needs mpmath for the 60-digit checks; install it with "
+             "'python3 -m pip install mpmath' (see requirements.txt)")
     return mpmath
 
 
 def highprec_point(mp, J, k1, k2, m, n, dps=HP_DPS):
-    r"""Eq. (25) vs Eq. (23) at (J, k2/k1, m, n) in `dps`-digit arithmetic.
+    r"""Eq. (27) vs Eq. (24) at (J, k2/k1, m, n) in `dps`-digit arithmetic.
 
-    H is rebuilt from Eq. (2) -- not from the tridiagonal shortcut -- in the
+    H is rebuilt from Eq. (1) -- not from the tridiagonal shortcut -- in the
     Z_+ basis, where S_y = i A with A real antisymmetric, so
     H = k1 S_x^2 - k2 A^2 - h_x S_x - h_z S_z is real symmetric.  The closed
     form uses the L/R block partners; the direct determinant uses eigenvectors
@@ -1294,7 +1272,7 @@ def parse_manuscript(path):
          lambda mant, ex: (float(mant) if mant else 1.0) * 10.0 ** int(ex))
     grab("hp_digits", r"in \$(\d+)\$-digit arithmetic", int)
 
-    # ---- Appendix G ------------------------------------------------------
+    # ---- SM Sec. S5 ------------------------------------------------------
     grab("zpm_digits", r"checked against \$-J,\\dots,J\$ to (\w+) digits",
          lambda w: _WORDNUM[w])
     grab("doublet_below", r"degenerate below \$10\^\{(-?\d+)\}\$",
@@ -1315,6 +1293,16 @@ def parse_manuscript(path):
                          (float(mo.group(2)), float(mo.group(3))),
                          (float(mo.group(4)), float(mo.group(5)))]
 
+    # Sec. VII: values of C at which a hard-axis crossing reverses its charge
+    # and emits a mirror pair, and the bound on the delay to the annihilation
+    mo = re.search(r"near \$C=([0-9.]+)\$, \$([0-9.]+)\$ and \$([0-9.]+)\\,\\mu\$K",
+                   flat)
+    if mo:
+        man["c_flip"] = [g for g in mo.groups()]
+    mo = re.search(r"less than \$([0-9.]+)\\,\\mu\$K before the annihilation", flat)
+    if mo:
+        man["c_delay"] = float(mo.group(1))
+
     grab("margin_min", r"requiring both to exceed\s+(\w+)",
          lambda w: float(_WORDNUM[w]))
     grab("margin_worst", r"worst of the two margins is \$(\d+)\$", float)
@@ -1328,7 +1316,7 @@ def parse_manuscript(path):
     grab("abs_cutoff", r"older threshold of \$10\^\{(-?\d+)\}\$",
          lambda e: 10.0 ** int(e))
 
-    # ---- Table I ---------------------------------------------------------
+    # ---- Table II ---------------------------------------------------------
     # Since v13 the table prints seven columns.  The "sum f" and closed-form
     # columns were dropped because they repeated the "doublets" column, and
     # the per-row checkmark became a caption sentence.  Both claims are still
@@ -1338,7 +1326,7 @@ def parse_manuscript(path):
     man["tab1"] = []
     for cells in _tex_rows(raw, "tab:summary"):
         if len(cells) != 7:
-            fail(f"Table I: expected 7 columns, got {len(cells)}: {cells}")
+            fail(f"Table II: expected 7 columns, got {len(cells)}: {cells}")
         man["tab1"].append(dict(
             J=_plain_int(cells[0]), N=int(_plain_int(cells[1])),
             pts=int(_plain_int(cells[2])), doublets=int(_plain_int(cells[3])),
@@ -1346,14 +1334,14 @@ def parse_manuscript(path):
     m_cap = re.search(r"\\caption\{Global checks\.(.*?)\}\s*\\label\{tab:summary\}",
                       raw, re.S)
     if not m_cap:
-        fail("Table I: caption not found")
+        fail("Table II: caption not found")
     man["tab1_caption"] = " ".join(m_cap.group(1).split())
 
-    # ---- Table II --------------------------------------------------------
+    # ---- Table S1 --------------------------------------------------------
     man["tab2"] = []
     for cells in _tex_rows(raw, "tab:J2"):
         if len(cells) != 11:
-            fail(f"Table II: expected 11 columns, got {len(cells)}: {cells}")
+            fail(f"Table S1: expected 11 columns, got {len(cells)}: {cells}")
         ints = [int(_plain_int(c)) for c in cells[:10]]
         dets = [d.strip() for d in _plain(cells[10]).split(",\\;")]
         man["tab2"].append(dict(
@@ -1471,6 +1459,159 @@ def ground_pair_fe8(J=10.0, k1=0.338, k2=0.246, C=29e-6, npts=200000,
     return on, off
 
 
+def fe8_axis_events(J=10.0, k1=0.338, k2=0.246, Cmax=29e-6, dC=0.5e-6,
+                    nh=4000, hmax=4.0):
+    """How the ground-pair crossings of Fe8 leave the positive hard axis.
+
+    Sec. VII states that two crossings of the two lowest levels on the h_x
+    axis can disappear only together, that both carry chi = -1 at C = 0, and
+    that one of them therefore first reverses its charge, emitting a mirror
+    pair of DPs into the plane h_z = 0, before the two annihilate.  On the
+    axis the two crossing states lie in different sectors of the pi rotation
+    about x, and the charge of a crossing is the sign of
+        slope * Im(<+|S_y|-> <-|S_z|+>),   slope = d(E_+ - E_-)/dh_x,
+    a gauge-invariant product (Result 4 fixes the common sign at C = 0).
+
+    Returns a list of events (C_flip, C_ann, x, (hx_off, hy_off)): the value
+    of C at which one crossing of the merging pair reverses its charge, the
+    value at which the pair annihilates, where on the axis that happens, and
+    an off-axis degeneracy in the plane h_z = 0 found just after it.
+    """
+    from scipy.optimize import brentq, minimize, minimize_scalar
+    Sx, Sy, Sz, rvals = spin_ops(J)
+    d = Sx.shape[0]
+    Sp = np.zeros((d, d))
+    for i in range(d - 1):
+        rr = rvals[i]
+        Sp[i + 1, i] = np.sqrt((J - rr) * (J + rr + 1))
+    Sm = Sp.T
+    Sxr, Szr = Sx.real, Sz.real
+    iSy = (Sp - Sm) / 2                      # i S_y, real antisymmetric
+    if np.max(np.abs(1j * Sy - iSy)) > 1e-12 * max(1.0, J):
+        fail("fe8_axis_events: i*Sy is not (S_+ - S_-)/2")
+    Q4 = np.linalg.matrix_power(Sp, 4) + np.linalg.matrix_power(Sm, 4)
+    H0 = (k1 * Sx @ Sx + k2 * Sy @ Sy).real
+    # sectors of R_x(pi) = exp(-i pi S_x): parity of the S_x eigenvalue
+    wx, Vx = np.linalg.eigh(Sxr)
+    par = np.round(np.cos(np.pi * wx)).astype(int)
+    if set(par) != {-1, 1}:
+        fail("fe8_axis_events: the pi rotation about x does not split the space")
+    Vp, Vm = Vx[:, par == 1], Vx[:, par == -1]
+    blocks = [(V.T @ H0 @ V, V.T @ Q4 @ V, np.diag(V.T @ Sxr @ V), V)
+              for V in (Vp, Vm)]
+
+    def lowest(h, C):
+        out = []
+        for A, B, sx, V in blocks:
+            e, u = np.linalg.eigh(A - C * B - h * np.diag(sx))
+            out.append((e[0], V @ u[:, 0]))
+        return out
+
+    def delta(h, C):
+        # eigvalsh on exactly the matrices that roots() diagonalizes in a
+        # batch, so that both see the same signs at the grid points
+        e = [np.linalg.eigvalsh(A - C * B - h * np.diag(sx))[0]
+             for A, B, sx, _ in blocks]
+        return e[0] - e[1]
+
+    def sigma(h, C):
+        (_, vp), (_, vm) = lowest(h, C)
+        slope = -(vp @ Sxr @ vp - vm @ Sxr @ vm)          # Hellmann-Feynman
+        g = (vp @ iSy @ vm) * (vm @ Szr @ vp)              # Im<+|Sy|-><-|Sz|+>
+        return int(np.sign(slope * g))
+
+    hs = np.linspace(1e-4, hmax, nh)
+
+    def roots(C):
+        vals = []
+        for A, B, sx, _ in blocks:
+            M = (A - C * B)[None, :, :] - hs[:, None, None] * np.diag(sx)[None]
+            vals.append(np.linalg.eigvalsh(M)[:, 0])
+        D = vals[0] - vals[1]
+        idx = np.nonzero(np.sign(D[:-1]) != np.sign(D[1:]))[0]
+        return [brentq(delta, hs[i], hs[i + 1], args=(C,), xtol=1e-14)
+                for i in idx]
+
+    Cs = np.arange(0.0, Cmax + 0.5 * dC, dC)
+    R = [roots(C) for C in Cs]
+    counts = [len(r) for r in R]
+    s0 = {sigma(x, 0.0) for x in R[0]}
+    if len(s0) != 1:
+        fail("fe8_axis_events: the hard-axis crossings at C = 0 do not share "
+             "one charge, contrary to Result 4")
+    s0 = s0.pop()
+    if any(b > a or (a - b) % 2 for a, b in zip(counts, counts[1:])):
+        fail(f"fe8_axis_events: crossing count not non-increasing in steps "
+             f"of two: {counts}")
+
+    events = []
+    for k in range(len(Cs) - 1):
+        for _ in range((counts[k] - counts[k + 1]) // 2):
+            Ca, Cb, xs = Cs[k], Cs[k + 1], R[k]
+            gaps = np.diff(xs)
+            j = int(np.argmin(gaps))
+            x1, x2 = xs[j], xs[j + 1]
+            pad = 0.25 * min([g for i, g in enumerate(gaps) if i != j]
+                             + [x1, hmax - x2])
+            lo, hi = x1 - pad, x2 + pad
+            s_end = np.sign(delta(lo, Ca))
+            if np.sign(delta(hi, Ca)) != s_end:
+                fail("fe8_axis_events: window around a merging pair is not clean")
+
+            def extremum(C):
+                r = minimize_scalar(lambda x: s_end * delta(x, C),
+                                    bounds=(lo, hi), method="bounded",
+                                    options=dict(xatol=1e-12))
+                return r.x, r.fun                  # < 0: the pair still exists
+
+            C_ann = brentq(lambda C: extremum(C)[1], Ca, Cb, xtol=1e-15)
+
+            def pair_charges(C):
+                xe, _ = extremum(C)
+                a = brentq(delta, lo, xe, args=(C,), xtol=1e-15)
+                b = brentq(delta, xe, hi, args=(C,), xtol=1e-15)
+                return sigma(a, C), sigma(b, C)
+
+            # step back from the annihilation until the pair is resolved well
+            # above round-off (|Delta| at the extremum > 1e-12 K)
+            back = 1e-13
+            while extremum(C_ann - back)[1] > -1e-12:
+                back *= 2
+                if back > C_ann - Ca:
+                    fail("fe8_axis_events: merging pair never resolved")
+            C_lo, C_hi = Ca, C_ann - back
+            if len(set(pair_charges(C_lo))) != 1:
+                fail(f"fe8_axis_events: pair near h_x = {x1:.3f} K has opposite "
+                     f"charges already at C = {C_lo * 1e6:.2f} uK")
+            if len(set(pair_charges(C_hi))) != 2:
+                fail(f"fe8_axis_events: pair near h_x = {x1:.3f} K still has "
+                     f"equal charges {back * 1e6:.1e} uK before it merges")
+            for _ in range(50):
+                mid = 0.5 * (C_lo + C_hi)
+                if len(set(pair_charges(mid))) == 1:
+                    C_lo = mid
+                else:
+                    C_hi = mid
+            C_flip = 0.5 * (C_lo + C_hi)
+            # the emitted mirror pair: a degeneracy in the plane h_z = 0 at
+            # h_y != 0, just after the annihilation
+            C_after = C_ann + 2e-9
+            xe, _ = extremum(C_after)
+            Hc = H0 - C_after * Q4
+            gap = lambda v: float(np.diff(np.linalg.eigvalsh(
+                Hc - v[0] * Sx - v[1] * Sy)[:2])[0])
+            r = minimize(gap, (xe, 5e-3), method="Nelder-Mead",
+                         options=dict(xatol=1e-12, fatol=1e-16, maxiter=8000))
+            if r.fun > 1e-10 or abs(r.x[1]) < 1e-5:
+                fail(f"fe8_axis_events: no mirror pair off the axis near "
+                     f"h_x = {xe:.4f} K after C = {C_ann * 1e6:.4f} uK "
+                     f"(gap {r.fun:.2e} at h_y = {r.x[1]:.2e})")
+            events.append((C_flip, C_ann, xe, (r.x[0], abs(r.x[1]))))
+            counts[k] -= 2
+            R[k] = [x for i, x in enumerate(xs) if i not in (j, j + 1)]
+    return events, s0
+
+
 def run_verify(tex_path):
     t0 = time.time()
     mis = Mismatch()
@@ -1485,12 +1626,12 @@ def run_verify(tex_path):
     print(f"sweep         : J = " + ", ".join(jlabel(J) for J in VERIFY_JS)
           + "   x   k2/k1 = " + ", ".join(str(r) for r in VERIFY_RATIOS))
     mis.check("Sec. VI anisotropy list", tuple(man["ratios"]), VERIFY_RATIOS)
-    mis.check("Appendix G rank cutoff (RANK_RTOL)", man["rank_rtol"], RANK_RTOL)
-    mis.check("Appendix G required margin (MIN_RANK_MARGIN)",
+    mis.check("SM Sec. S5 rank cutoff (RANK_RTOL)", man["rank_rtol"], RANK_RTOL)
+    mis.check("SM Sec. S5 required margin (MIN_RANK_MARGIN)",
               man["margin_min"], MIN_RANK_MARGIN)
-    mis.check("Appendix G degenerate-below threshold",
+    mis.check("SM Sec. S5 degenerate-below threshold",
               man["doublet_below"], GREY_ZONE[0])
-    mis.check("Appendix G distinct-above threshold",
+    mis.check("SM Sec. S5 distinct-above threshold",
               man["distinct_above"], GREY_ZONE[1])
 
     # ---------------------------------------------------------------- 1 ----
@@ -1532,7 +1673,7 @@ def run_verify(tex_path):
             if sB < g_sigma[0]:
                 g_sigma = (sB, (J, rr, smn[0], smn[1]))
 
-            # Eq. (25) against Eq. (23), point by point
+            # Eq. (27) against Eq. (24), point by point
             for row in res["rows"]:
                 m, n, f = row["m"], row["n"], row["f"]
 
@@ -1570,17 +1711,17 @@ def run_verify(tex_path):
           f"{ndoublets}")
     print(f"  eigenvalues of Z_pm vs -J..J : max deviation {g_zpm:.2e} "
           f"(manuscript: correct to {man['zpm_digits']} digits)")
-    mis.check("Appendix G: Z_pm eigenvalues good to N digits",
+    mis.check("SM Sec. S5: Z_pm eigenvalues good to N digits",
               f">= {man['zpm_digits']} digits", f"{g_zpm:.2e}",
               ok=(g_zpm < 10.0 ** (-man["zpm_digits"])))
     print(f"  doublet detection, gap/|E| : in-doublet <= {g_pairgap_lvl:.2e}, "
           f"distinct >= {g_sepgap_lvl:.2e}")
     print(f"  doublet detection, gap/width: in-doublet <= {g_pairgap_wid:.2e}, "
-          f"distinct >= {g_sepgap_wid:.2e}   <- Appendix G's scaling")
-    mis.check("Appendix G: every in-doublet gap below the quoted threshold",
+          f"distinct >= {g_sepgap_wid:.2e}   <- SM Sec. S5's scaling")
+    mis.check("SM Sec. S5: every in-doublet gap below the quoted threshold",
               f"< {man['doublet_below']:.0e}", f"{g_pairgap_wid:.2e}",
               ok=(g_pairgap_wid < man["doublet_below"]))
-    mis.check("Appendix G: every distinct gap above the quoted threshold",
+    mis.check("SM Sec. S5: every distinct gap above the quoted threshold",
               f"> {man['distinct_above']:.0e}", f"{g_sepgap_wid:.2e}",
               ok=(g_sepgap_wid > man["distinct_above"]))
 
@@ -1601,20 +1742,20 @@ def run_verify(tex_path):
     # ---------------------------------------------------------------- 3 ----
     print()
     print("-" * 78)
-    print("[3] EQ. (25) AGAINST THE DIRECT DETERMINANT EQ. (23)")
+    print("[3] EQ. (27) AGAINST THE DIRECT DETERMINANT EQ. (24)")
     print("-" * 78)
     er, ew = g_relerr
-    print(f"  double precision, Eq. (25) vs full-H eigenvectors:")
+    print(f"  double precision, Eq. (27) vs full-H eigenvectors:")
     print(f"    largest relative error : {er:.4e}")
     at = (f"at J={jlabel(ew[0])}, k2/k1={ew[1]}, "
           f"(m,n)=({ew[2]:+.0f},{ew[3]:+.0f})")
-    print(f"    {at}   Eq.(25) = {ew[4]:.12e}")
-    print(f"    {'':{len(at)}}   Eq.(23) = {ew[5]:.12e}")
+    print(f"    {at}   Eq.(27) = {ew[4]:.12e}")
+    print(f"    {'':{len(at)}}   Eq.(24) = {ew[5]:.12e}")
     print(f"    manuscript (Sec. VI)   : below {man['detM_relerr']:.1e}")
-    mis.check("Sec. VI: Eq. (25) vs Eq. (23), double precision",
+    mis.check("Sec. VI: Eq. (27) vs Eq. (24), double precision",
               f"< {man['detM_relerr']:.1e}", f"{er:.4e}",
               ok=(er < man["detM_relerr"]))
-    print(f"  same comparison in the (|L>,|R>) doublet basis, where Eq. (23)")
+    print(f"  same comparison in the (|L>,|R>) doublet basis, where Eq. (24)")
     print(f"  suffers no degenerate-subspace round-off:")
     print(f"    largest relative error : {g_relerr_lr[0]:.4e}   "
           f"(at J={jlabel(g_relerr_lr[1][0])}, k2/k1={g_relerr_lr[1][1]})")
@@ -1635,13 +1776,13 @@ def run_verify(tex_path):
                            else 0.0)
             tag = (f"J={jlabel(J):>3} k2/k1={rr:<5} "
                    f"(m,n)=({m:+.0f},{n:+.0f})")
-            print(f"    {tag}  Eq.(25) = {scl}")
-            print(f"    {'':{len(tag)}}  Eq.(23) = {sdi}")
+            print(f"    {tag}  Eq.(27) = {scl}")
+            print(f"    {'':{len(tag)}}  Eq.(24) = {sdi}")
             print(f"    {'':{len(tag)}}  rel.err = {srel}  "
                   f"({digits} digits agree)")
     print(f"    worst relative error over the high-precision points: "
           f"{hp_worst:.3e}")
-    mis.check("Sec. VI: Eq. (25) exact in high precision",
+    mis.check("Sec. VI: Eq. (27) exact in high precision",
               f"agree to {man['hp_digits']} digits",
               f"worst rel. err {hp_worst:.3e}",
               ok=(hp_worst < 10.0 ** (-man["hp_digits"] + 5)))
@@ -1666,9 +1807,9 @@ def run_verify(tex_path):
     gm, gw = g_margin
     print(f"  worst margin over the sweep   : {gm:.4f}   at J={jlabel(gw[0])}, "
           f"k2/k1={gw[1]}")
-    print(f"  manuscript (Appendix G)       : {man['margin_worst']:.0f}")
+    print(f"  manuscript (SM Sec. S5)       : {man['margin_worst']:.0f}")
     margin_ok = mis.check(
-        "Appendix G: worst rank-classification margin over the sweep",
+        "SM Sec. S5: worst rank-classification margin over the sweep",
         f"{man['margin_worst']:.0f}", f"{gm:.2f}",
         ok=(round(gm) == round(man["margin_worst"])))
     if not margin_ok:
@@ -1696,20 +1837,20 @@ def run_verify(tex_path):
     sg, sw = g_sigma
     print(f"  smallest nonvanishing sigma(B_mn) : {sg:.4e}   at "
           f"J={jlabel(sw[0])}, k2/k1={sw[1]}, (m,n)=({sw[2]:+.0f},{sw[3]:+.0f})")
-    print(f"  manuscript (Appendix G)           : {man['sigma_min']:.1e} at "
+    print(f"  manuscript (SM Sec. S5)           : {man['sigma_min']:.1e} at "
           f"J={man['sigma_min_where'][0]:.0f}, "
           f"k2/k1={man['sigma_min_where'][1]}")
     s_mant, s_ex = _mant_exp(sg)
     q_mant, q_ex = _mant_exp(man["sigma_min"])
-    mis.check("Appendix G: smallest nonvanishing singular value of B_mn",
+    mis.check("SM Sec. S5: smallest nonvanishing singular value of B_mn",
               f"{q_mant}e{q_ex}", f"{s_mant}e{s_ex}")
-    mis.check("Appendix G: location of that singular value",
+    mis.check("SM Sec. S5: location of that singular value",
               f"J={man['sigma_min_where'][0]:.0f}, "
               f"k2/k1={man['sigma_min_where'][1]}",
               f"J={sw[0]:.0f}, k2/k1={sw[1]}",
               ok=(sw[0] == man["sigma_min_where"][0]
                   and sw[1] == man["sigma_min_where"][1]))
-    print(f"  Appendix G further claims that the absolute cutoff "
+    print(f"  SM Sec. S5 further claims that the absolute cutoff "
           f"{man['abs_cutoff']:.0e} of the old code")
     print("  misclassifies ranks 'just outside the grid used here'.  Walking "
           "the largest J")
@@ -1727,7 +1868,7 @@ def run_verify(tex_path):
               f"{sB:.3e}   at (m,n)=({smn[0]:+.0f},{smn[1]:+.0f})"
               + ("   <- an absolute 1e-8 cutoff calls this rank zero"
                  if bad else ""))
-    mis.check("Appendix G: an absolute 1e-8 cutoff fails just outside the grid",
+    mis.check("SM Sec. S5: an absolute 1e-8 cutoff fails just outside the grid",
               f"fails below some k2/k1 < {VERIFY_RATIOS[0]}",
               ("fails first at k2/k1=%g" % first_bad[0]) if first_bad
               else "never fails on the probed ratios",
@@ -1736,7 +1877,7 @@ def run_verify(tex_path):
     # ---------------------------------------------------------------- 5 ----
     print()
     print("-" * 78)
-    print("[5] TABLE I -- GLOBAL CHECKS  (as the table typesets it)")
+    print("[5] TABLE II -- GLOBAL CHECKS  (as the table typesets it)")
     print("-" * 78)
     hdr = (f"  {'J':>4} {'N':>3} {'pts':>4} {'doub':>5} {'sum f':>6} "
            f"{'2/3J(J+1)(2J+1)':>16}  {'max det M (0.05)':>26} "
@@ -1745,10 +1886,10 @@ def run_verify(tex_path):
     for phrase in ("equal at every anisotropy both to",
                    "All rank, multiplicity and sign checks passed in every row"):
         if phrase not in man["tab1_caption"]:
-            fail(f"Table I caption no longer claims: {phrase!r} -- the "
+            fail(f"Table II caption no longer claims: {phrase!r} -- the "
                  f"corresponding check below would be vacuous")
     if len(man["tab1"]) != len(VERIFY_JS):
-        mis.check("Table I: number of rows", len(VERIFY_JS), len(man["tab1"]))
+        mis.check("Table II: number of rows", len(VERIFY_JS), len(man["tab1"]))
     for idx, J in enumerate(VERIFY_JS):
         N = int(round(2 * J)) + 1
         pts = int(round((2 * J) ** 2))
@@ -1766,7 +1907,7 @@ def run_verify(tex_path):
         if idx >= len(man["tab1"]):
             continue
         row = man["tab1"][idx]
-        tag = f"Table I row J={jlabel(J)}"
+        tag = f"Table II row J={jlabel(J)}"
         mis.check(f"{tag}: J", row["J"], jlabel(J))
         mis.check(f"{tag}: N", row["N"], N)
         mis.check(f"{tag}: pts", row["pts"], pts)
@@ -1787,14 +1928,14 @@ def run_verify(tex_path):
     # ---------------------------------------------------------------- 6 ----
     print()
     print("-" * 78)
-    print(f"[6] TABLE II -- COMPLETE LATTICE DATA FOR J={jlabel(TABLE2_J)}, "
+    print(f"[6] TABLE S1 -- COMPLETE LATTICE DATA FOR J={jlabel(TABLE2_J)}, "
           f"k2/k1={TABLE2_RATIO}")
     print("-" * 78)
     print("     m    n    X    Z    p    q    f  obs  rank[P,Q]  rank B   det M")
     res2 = scan[(TABLE2_J, TABLE2_RATIO)]
     rows2 = sorted(res2["rows"], key=lambda r: (r["Z"], r["X"]))
     if len(man["tab2"]) != len(rows2):
-        mis.check("Table II: number of rows", len(man["tab2"]), len(rows2))
+        mis.check("Table S1: number of rows", len(man["tab2"]), len(rows2))
     for idx, r in enumerate(rows2):
         dets = [f"{d:.4f}" for d in sorted(r["dets"])]
         i2 = lambda v: int(round(v)) + 0            # kills the -0 of %+.0f
@@ -1805,7 +1946,7 @@ def run_verify(tex_path):
         if idx >= len(man["tab2"]):
             continue
         mrow = man["tab2"][idx]
-        tag = (f"Table II row {idx + 1} "
+        tag = (f"Table S1 row {idx + 1} "
                f"(m,n)=({i2(r['m']):+d},{i2(r['n']):+d})")
         for key, val in (("m", i2(r["m"])), ("n", i2(r["n"])),
                          ("X", i2(r["X"])), ("Z", i2(r["Z"])),
@@ -1857,6 +1998,35 @@ def run_verify(tex_path):
             mis.check(f"Sec. VII: off-axis ground-pair field {k} (h_y)",
                       f"{want[1]:.3f}", f"{got[1]:.3f}")
 
+    # ------------------------------- how the ground-pair DPs leave the axis --
+    print()
+    print("-" * 78)
+    print("[9] HOW THE GROUND-PAIR DPs OF Fe8 LEAVE THE HARD AXIS AS C GROWS")
+    print("-" * 78)
+    events, s0 = fe8_axis_events()
+    print("  at C = 0 all crossings on the positive h_x axis carry one charge")
+    print("  (chi = -1, Result 4); for each pair that disappears as C grows:")
+    for C_flip, C_ann, x, (hx, hy) in events:
+        print(f"  one crossing reverses its charge at C = {C_flip * 1e6:8.5f} uK,"
+              f" the pair annihilates")
+        print(f"    at C = {C_ann * 1e6:8.5f} uK near h_x = {x:.4f} K "
+              f"(delay {(C_ann - C_flip) * 1e6:.5f} uK); just after, a DP in")
+        print(f"    the plane h_z = 0 sits at (h_x, h_y) = ({hx:.4f}, +/-{hy:.4f}) K")
+    print("  (J = 10, k1 = 0.338 K, k2 = 0.246 K, quartic term -C (S_+^4 + S_-^4);")
+    print("   charges from the sign of slope * Im(<+|S_y|-><-|S_z|+>) between the")
+    print("   two sectors of the pi rotation about x)")
+    mis.check("Sec. VII: number of pairs leaving the positive hard axis",
+              len(man.get("c_flip", [None] * 3)), len(events))
+    if "c_flip" in man:
+        for k, (want, (C_flip, _, _, _)) in enumerate(zip(man["c_flip"], events), 1):
+            mis.check(f"Sec. VII: C of charge reversal {k} (uK)", want,
+                      f"{C_flip * 1e6:.{len(want.split('.')[1])}f}")
+    if "c_delay" in man:
+        worst = max(C_ann - C_flip for C_flip, C_ann, _, _ in events) * 1e6
+        mis.check("Sec. VII: delay from emission to annihilation below "
+                  f"{man['c_delay']} uK", f"< {man['c_delay']}", f"{worst:.5f}",
+                  ok=worst < man["c_delay"])
+
     # ---------------------------------------------------------------- v ----
     print()
     print("=" * 78)
@@ -1887,7 +2057,7 @@ def main(argv=None):
     plt.rcParams.update(PLT_STYLE)
 
     print("=" * 74)
-    print("make_figures.py -- five figures for Biaxial_DP_PRB (v8)")
+    print("make_figures.py -- figures and verification, revised manuscript (v10)")
     print("=" * 74)
     print(f"host python   : {platform.python_version()} ({sys.executable})")
     print(f"numpy         : {np.__version__}")
@@ -1947,7 +2117,7 @@ def main(argv=None):
 
     # ---- the numbers quoted in the text ------------------------------------
     print("-" * 74)
-    print("quoted det M numbers (text, Sec. VI and Table I):")
+    print("quoted det M numbers (text, Sec. VI and Table II):")
     for q in study_quoted_numbers():
         print(f"  J={jlabel(q['J']):>3}  k2/k1={q['ratio']:<5} "
               f"min|det M| = {q['min_absdet']:.4e}   (quoted {q['quoted']:.1e})   "
@@ -1994,7 +2164,7 @@ def build_parser():
                     "(default), or verify every number the manuscript asserts.")
     p.add_argument("--verify", action="store_true",
                    help="do not write any figure; instead reproduce and print "
-                        "the sweep of Sec. VI, the diagnostics of Appendix G "
+                        "the sweep of Sec. VI, the diagnostics of SM Sec. S5 "
                         "and both tables, and cross-check them against the "
                         "numbers hard-coded in the .tex source")
     p.add_argument("--tex", default=os.path.join(OUT, TEX_NAME),
